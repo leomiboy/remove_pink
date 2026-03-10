@@ -7,7 +7,7 @@ import io
 
 # --- 網頁設定 ---
 st.set_page_config(page_title="PDF 粉色浮水印移除", layout="wide")
-st.title("📄 試題本粉色浮水印移除工具 (完整版)")
+st.title("📄 試題本粉色浮水印移除工具")
 
 # --- 影像處理核心函數 ---
 def process_image(pix, h_min, h_max, s_min, v_min):
@@ -23,7 +23,7 @@ def process_image(pix, h_min, h_max, s_min, v_min):
     upper_pink = np.array([h_max, 255, 255])
     mask = cv2.inRange(hsv_img, lower_pink, upper_pink)
     
-    # 3. 替換顏色為白色
+    # 3. 替換顏色為純白色
     result_img = img_array.copy()
     result_img[mask > 0] =[255, 255, 255]
     
@@ -31,13 +31,13 @@ def process_image(pix, h_min, h_max, s_min, v_min):
 
 # --- 側邊欄：參數微調 ---
 st.sidebar.header("🎨 微調粉紅色範圍 (HSV)")
-st.sidebar.write("調整拉桿可即時預覽第一頁效果：")
+st.sidebar.write("已載入最佳預設值。調整拉桿可即時預覽第一頁效果：")
 
-# 💡 請在這裡填入你微調後的完美數據！（把最後一個數字換掉）
-h_min = st.sidebar.slider("Hue (色相) 最小值", 0, 179, 135) # <-- 將 135 改成你的值
-h_max = st.sidebar.slider("Hue (色相) 最大值", 0, 179, 179) # <-- 將 179 改成你的值
-s_min = st.sidebar.slider("Saturation (飽和度) 最小值", 0, 255, 15) # <-- 將 15 改成你的值
-v_min = st.sidebar.slider("Value (明度) 最小值", 0, 255, 100) # <-- 將 100 改成你的值
+# 💡 已經將你的最佳參數設為預設值 (最後一個數字)
+h_min = st.sidebar.slider("Hue (色相) 最小值", 0, 179, 135)
+h_max = st.sidebar.slider("Hue (色相) 最大值", 0, 179, 179)
+s_min = st.sidebar.slider("Saturation (飽和度) 最小值", 0, 255, 0)
+v_min = st.sidebar.slider("Value (明度) 最小值", 0, 255, 200)
 
 # --- 初始化 Session State ---
 # 用來暫存處理完的 PDF 檔案，避免網頁重整後消失
@@ -76,8 +76,8 @@ if uploaded_file is not None:
     st.markdown("### 🚀 執行全檔處理")
     
     # 當按下按鈕時，開始跑迴圈
-    if st.button("開始處理全份文件 (這可能需要幾十秒，請稍候)"):
-        st.session_state.final_pdf_bytes = None # 清空舊紀錄
+    if st.button("開始處理全份文件 (可能需要幾十秒，請稍候)"):
+        st.session_state.final_pdf_bytes = None # 每次點擊先清空舊紀錄
         
         progress_bar = st.progress(0)
         status_text = st.empty()
@@ -92,7 +92,7 @@ if uploaded_file is not None:
             page = doc.load_page(i)
             pix = page.get_pixmap(matrix=matrix)
             
-            # 進行除色處理 (只取回傳的 clean_img)
+            # 進行除色處理 (只取回傳的 clean_img_array)
             _, clean_img_array = process_image(pix, h_min, h_max, s_min, v_min)
             
             # 將 OpenCV 陣列 (NumPy) 轉換為 PIL Image 物件，準備打包 PDF
@@ -112,21 +112,21 @@ if uploaded_file is not None:
             format="PDF", 
             save_all=True, 
             append_images=processed_pil_images[1:], 
-            resolution=100.0
+            resolution=100.0  # 控制輸出 PDF 的解析度標籤
         )
         
-        # 存入 Session State
+        # 將最終的二進位檔案存入 Session State
         st.session_state.final_pdf_bytes = pdf_buffer.getvalue()
         
         progress_bar.empty()
         status_text.success("🎉 全份文件處理完成！請點擊下方按鈕下載。")
 
-    # --- 顯示下載按鈕 ---
-    # 只要 Session State 裡有東西，就顯示下載按鈕
-    if st.session_state.final_pdf_bytes is not None:
-        st.download_button(
-            label="📥 下載乾淨版 PDF",
-            data=st.session_state.final_pdf_bytes,
-            file_name="cleaned_document.pdf",
-            mime="application/pdf"
-        )
+# --- 獨立顯示下載按鈕 ---
+# 只要 Session State 裡有產出的 PDF，就在最下方顯示下載按鈕
+if st.session_state.final_pdf_bytes is not None:
+    st.download_button(
+        label="📥 點我下載乾淨版 PDF",
+        data=st.session_state.final_pdf_bytes,
+        file_name="cleaned_document.pdf",
+        mime="application/pdf"
+    )
