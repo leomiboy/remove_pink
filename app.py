@@ -41,17 +41,17 @@ def process_image(pix,
     
     # 6. 將遮罩範圍內的像素替換為純白色
     result_img = img_array.copy()
-    result_img[combined_mask > 0] = [255, 255, 255]
+    result_img[combined_mask > 0] =[255, 255, 255]
     
     return img_array, result_img
 
 # --- 側邊欄：參數微調 ---
 st.sidebar.header("🎨 浮水印顏色清除設定")
+st.sidebar.write("已載入最佳雙色預設值，可直接處理！")
 
 # 【粉色設定區塊】
 st.sidebar.markdown("### 🌸 粉色/紅色清除")
 remove_pink = st.sidebar.checkbox("啟用去除粉紅色", value=True)
-# 保留你之前測試好的完美預設值
 p_h_min = st.sidebar.slider("粉色 Hue 最小值", 0, 179, 135)
 p_h_max = st.sidebar.slider("粉色 Hue 最大值", 0, 179, 179)
 p_s_min = st.sidebar.slider("粉色 Saturation 最小值", 0, 255, 0)
@@ -60,11 +60,11 @@ p_v_min = st.sidebar.slider("粉色 Value 最小值", 0, 255, 200)
 st.sidebar.markdown("---")
 
 # 【藍色設定區塊】
-st.sidebar.markdown("### 🌊 藍色清除 (請在此測試)")
+st.sidebar.markdown("### 🌊 藍色清除")
 remove_blue = st.sidebar.checkbox("啟用去除藍色", value=True)
-# 💡 這裡是我為淺藍色抓的初步預設值，你可以拉動測試找出完美數據
+# 💡 這裡已經替換成你測試出來的最強數據！
 b_h_min = st.sidebar.slider("藍色 Hue 最小值", 0, 179, 90)
-b_h_max = st.sidebar.slider("藍色 Hue 最大值", 0, 179, 130)
+b_h_max = st.sidebar.slider("藍色 Hue 最大值", 0, 179, 179)
 b_s_min = st.sidebar.slider("藍色 Saturation 最小值", 0, 255, 0)
 b_v_min = st.sidebar.slider("藍色 Value 最小值", 0, 255, 200)
 
@@ -85,7 +85,7 @@ if uploaded_file is not None:
     # --- 預覽第一頁 ---
     st.markdown("### 👁️ 第一頁即時預覽")
     page_0 = doc.load_page(0)
-    matrix = fitz.Matrix(2.0, 2.0)
+    matrix = fitz.Matrix(2.0, 2.0) # 放大2倍保持解析度
     pix_0 = page_0.get_pixmap(matrix=matrix)
     
     # 呼叫處理函數 (帶入粉色與藍色的參數)
