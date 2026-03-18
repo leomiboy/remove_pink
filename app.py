@@ -64,8 +64,8 @@ st.sidebar.markdown("### 🌊 藍色清除")
 remove_blue = st.sidebar.checkbox("啟用去除藍色", value=True)
 # 💡 這裡已經替換成你測試出來的最強數據！
 b_h_min = st.sidebar.slider("藍色 Hue 最小值", 0, 179, 90)
-b_h_max = st.sidebar.slider("藍色 Hue 最大值", 0, 179, 179)
-b_s_min = st.sidebar.slider("藍色 Saturation 最小值", 0, 255, 0)
+b_h_max = st.sidebar.slider("藍色 Hue 最大值", 0, 179, 100)
+b_s_min = st.sidebar.slider("藍色 Saturation 最小值", 0, 255, 19)
 b_v_min = st.sidebar.slider("藍色 Value 最小值", 0, 255, 200)
 
 
