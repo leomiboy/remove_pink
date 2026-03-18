@@ -7,7 +7,7 @@ import io
 
 # --- 網頁設定 ---
 st.set_page_config(page_title="PDF 浮水印與解答移除工具", layout="wide")
-st.title("📄 試題本浮水印/解答移除工具 (三色完整版)")
+st.title("📄 試題本浮水印/解答移除工具 (三色終極版)")
 
 # --- 影像處理核心函數 ---
 def process_image(pix, 
@@ -56,7 +56,7 @@ def process_image(pix,
 
 # --- 側邊欄：參數微調 ---
 st.sidebar.header("🎨 浮水印顏色清除設定")
-st.sidebar.write("可針對不同題本自由勾選要去除的顏色！")
+st.sidebar.write("已載入你測試好的完美三色預設值！")
 
 # 【粉色設定區塊】
 st.sidebar.markdown("### 🌸 粉色/紅色清除")
@@ -78,15 +78,15 @@ b_v_min = st.sidebar.slider("藍色 Value 最小值", 0, 255, 200)
 
 st.sidebar.markdown("---")
 
-# 【灰色設定區塊】(新增)
-st.sidebar.markdown("### 🐘 灰色清除 (請在此測試)")
+# 【灰色設定區塊】
+st.sidebar.markdown("### 🐘 灰色清除")
 remove_gray = st.sidebar.checkbox("啟用去除灰色", value=True)
-g_h_min = st.sidebar.slider("灰色 Hue 最小值 (通常設0)", 0, 179, 0)
-g_h_max = st.sidebar.slider("灰色 Hue 最大值 (通常設179)", 0, 179, 179)
-# 灰色最重要的特徵：飽和度低。調高會開始吃掉彩色。
-g_s_max = st.sidebar.slider("灰色 Saturation 最大值 (越低越不傷彩色)", 0, 255, 40)
-# 確保不會吃掉黑字的關鍵：明度必須高於黑字。調低會吃掉黑字。
-g_v_min = st.sidebar.slider("灰色 Value 最小值 (避開黑字)", 0, 255, 160)
+g_h_min = st.sidebar.slider("灰色 Hue 最小值", 0, 179, 0)
+g_h_max = st.sidebar.slider("灰色 Hue 最大值", 0, 179, 179)
+# 灰色最重要的特徵：飽和度低。最大值設為 40
+g_s_max = st.sidebar.slider("灰色 Saturation 最大值", 0, 255, 40)
+# 確保不會吃掉黑字的關鍵。最小值設為 200
+g_v_min = st.sidebar.slider("灰色 Value 最小值", 0, 255, 200)
 
 
 # --- 初始化 Session State ---
