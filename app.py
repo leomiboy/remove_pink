@@ -7,39 +7,48 @@ import io
 
 # --- 網頁設定 ---
 st.set_page_config(page_title="PDF 浮水印與解答移除工具", layout="wide")
-st.title("📄 試題本浮水印/解答移除工具 (雙色版)")
+st.title("📄 試題本浮水印/解答移除工具 (三色完整版)")
 
 # --- 影像處理核心函數 ---
 def process_image(pix, 
                   remove_pink, p_h_min, p_h_max, p_s_min, p_v_min,
-                  remove_blue, b_h_min, b_h_max, b_s_min, b_v_min):
-    """將 PDF 頁面轉換為圖片，並依需求去除粉色與藍色"""
+                  remove_blue, b_h_min, b_h_max, b_s_min, b_v_min,
+                  remove_gray, g_h_min, g_h_max, g_s_max, g_v_min):
+    """將 PDF 頁面轉換為圖片，並依需求去除特定顏色"""
     # 1. 轉成 NumPy 陣列
     img_array = np.frombuffer(pix.samples, dtype=np.uint8).reshape(pix.h, pix.w, pix.n)
     if pix.n == 4: # 處理透明通道
         img_array = cv2.cvtColor(img_array, cv2.COLOR_RGBA2RGB)
         
-    # 2. 轉 HSV
+    # 2. 轉 HSV 色彩空間
     hsv_img = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
     
     # 3. 建立一個全黑的基礎遮罩
     combined_mask = np.zeros(hsv_img.shape[:2], dtype=np.uint8)
     
-    # 4. 如果啟用粉紅色去除，則把粉色遮罩疊加進去
+    # 4. 疊加：粉色遮罩
     if remove_pink:
         lower_pink = np.array([p_h_min, p_s_min, p_v_min])
         upper_pink = np.array([p_h_max, 255, 255])
         mask_pink = cv2.inRange(hsv_img, lower_pink, upper_pink)
         combined_mask = cv2.bitwise_or(combined_mask, mask_pink)
         
-    # 5. 如果啟用藍色去除，則把藍色遮罩疊加進去
+    # 5. 疊加：藍色遮罩
     if remove_blue:
         lower_blue = np.array([b_h_min, b_s_min, b_v_min])
         upper_blue = np.array([b_h_max, 255, 255])
         mask_blue = cv2.inRange(hsv_img, lower_blue, upper_blue)
         combined_mask = cv2.bitwise_or(combined_mask, mask_blue)
+
+    # 6. 疊加：灰色遮罩 (注意：灰色是限制 Saturation 最大值)
+    if remove_gray:
+        # 灰色的 Saturation 通常很低，Value 不會太低(否則是黑色)
+        lower_gray = np.array([g_h_min, 0, g_v_min])
+        upper_gray = np.array([g_h_max, g_s_max, 255])
+        mask_gray = cv2.inRange(hsv_img, lower_gray, upper_gray)
+        combined_mask = cv2.bitwise_or(combined_mask, mask_gray)
     
-    # 6. 將遮罩範圍內的像素替換為純白色
+    # 7. 將遮罩範圍內的像素替換為純白色
     result_img = img_array.copy()
     result_img[combined_mask > 0] =[255, 255, 255]
     
@@ -47,7 +56,7 @@ def process_image(pix,
 
 # --- 側邊欄：參數微調 ---
 st.sidebar.header("🎨 浮水印顏色清除設定")
-st.sidebar.write("已載入最佳雙色預設值，可直接處理！")
+st.sidebar.write("可針對不同題本自由勾選要去除的顏色！")
 
 # 【粉色設定區塊】
 st.sidebar.markdown("### 🌸 粉色/紅色清除")
@@ -62,11 +71,22 @@ st.sidebar.markdown("---")
 # 【藍色設定區塊】
 st.sidebar.markdown("### 🌊 藍色清除")
 remove_blue = st.sidebar.checkbox("啟用去除藍色", value=True)
-# 💡 這裡已經替換成你測試出來的最強數據！
 b_h_min = st.sidebar.slider("藍色 Hue 最小值", 0, 179, 90)
 b_h_max = st.sidebar.slider("藍色 Hue 最大值", 0, 179, 100)
 b_s_min = st.sidebar.slider("藍色 Saturation 最小值", 0, 255, 19)
 b_v_min = st.sidebar.slider("藍色 Value 最小值", 0, 255, 200)
+
+st.sidebar.markdown("---")
+
+# 【灰色設定區塊】(新增)
+st.sidebar.markdown("### 🐘 灰色清除 (請在此測試)")
+remove_gray = st.sidebar.checkbox("啟用去除灰色", value=True)
+g_h_min = st.sidebar.slider("灰色 Hue 最小值 (通常設0)", 0, 179, 0)
+g_h_max = st.sidebar.slider("灰色 Hue 最大值 (通常設179)", 0, 179, 179)
+# 灰色最重要的特徵：飽和度低。調高會開始吃掉彩色。
+g_s_max = st.sidebar.slider("灰色 Saturation 最大值 (越低越不傷彩色)", 0, 255, 40)
+# 確保不會吃掉黑字的關鍵：明度必須高於黑字。調低會吃掉黑字。
+g_v_min = st.sidebar.slider("灰色 Value 最小值 (避開黑字)", 0, 255, 160)
 
 
 # --- 初始化 Session State ---
@@ -88,11 +108,12 @@ if uploaded_file is not None:
     matrix = fitz.Matrix(2.0, 2.0) # 放大2倍保持解析度
     pix_0 = page_0.get_pixmap(matrix=matrix)
     
-    # 呼叫處理函數 (帶入粉色與藍色的參數)
+    # 呼叫處理函數 (帶入粉、藍、灰三色的參數)
     orig_img, clean_img = process_image(
         pix_0, 
         remove_pink, p_h_min, p_h_max, p_s_min, p_v_min,
-        remove_blue, b_h_min, b_h_max, b_s_min, b_v_min
+        remove_blue, b_h_min, b_h_max, b_s_min, b_v_min,
+        remove_gray, g_h_min, g_h_max, g_s_max, g_v_min
     )
     
     col1, col2 = st.columns(2)
@@ -124,7 +145,8 @@ if uploaded_file is not None:
             _, clean_img_array = process_image(
                 pix, 
                 remove_pink, p_h_min, p_h_max, p_s_min, p_v_min,
-                remove_blue, b_h_min, b_h_max, b_s_min, b_v_min
+                remove_blue, b_h_min, b_h_max, b_s_min, b_v_min,
+                remove_gray, g_h_min, g_h_max, g_s_max, g_v_min
             )
             
             pil_img = Image.fromarray(clean_img_array)
